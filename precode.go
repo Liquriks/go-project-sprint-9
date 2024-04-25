@@ -16,8 +16,7 @@ import (
 func Generator(ctx context.Context, ch chan<- int64, fn func(int64)) {
 	// 1. Функция Generator
 	defer close(ch)
-	for {
-		i := int64(1)
+	for i := int64(1); i > 0; i++ {
 		select {
 		case ch <- i:
 			fn(i)
@@ -51,7 +50,7 @@ func main() {
 
 	// генерируем числа, считая параллельно их количество и сумму
 	go Generator(ctx, chIn, func(i int64) {
-		mu.Lock()
+		mu.Lock() // честно не понимаю что тут ещё добавить...
 		defer mu.Unlock()
 		atomic.AddInt64(&inputSum, i)
 		atomic.AddInt64(&inputCount, 1)
