@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 )
-
-var mu sync.Mutex
 
 // Generator генерирует последовательность чисел 1,2,3 и т.д. и
 // отправляет их в канал ch. При этом после записи в канал для каждого числа
@@ -17,11 +16,14 @@ var mu sync.Mutex
 func Generator(ctx context.Context, ch chan<- int64, fn func(int64)) {
 	// 1. Функция Generator
 	defer close(ch)
-	select {
-	case ch <- int64(1):
-		fn(int64(1))
-	case <-ctx.Done():
-		return
+	for {
+		i := int64(1)
+		select {
+		case ch <- i:
+			fn(i)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
@@ -36,6 +38,7 @@ func Worker(in <-chan int64, out chan<- int64) {
 }
 
 func main() {
+	var mu sync.Mutex
 	chIn := make(chan int64)
 
 	// 3. Создание контекста
@@ -50,8 +53,8 @@ func main() {
 	go Generator(ctx, chIn, func(i int64) {
 		mu.Lock()
 		defer mu.Unlock()
-		inputSum += i
-		inputCount++
+		atomic.AddInt64(&inputSum, i)
+		atomic.AddInt64(&inputCount, 1)
 	})
 
 	const NumOut = 5 // количество обрабатывающих горутин и каналов
